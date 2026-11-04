@@ -481,6 +481,10 @@ function buildCard(q) {
   const isAdmin = currentUser.toLowerCase() === 'admin';
 
   const adminButtons = (isAdmin && isLatest()) ? `
+    <button class="btn btn-admin-review${q.markedForReview ? ' active' : ''}" id="${q.id}-review-btn" onclick="toggleMarkForReview('${q.id}')" title="${q.markedForReview ? 'Remove review mark' : 'Mark for review'}">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><circle cx="12" cy="17" r=".6" fill="currentColor"/></svg>
+      ${q.markedForReview ? 'Marked for review' : 'Mark for review'}
+    </button>
     <button class="btn btn-admin-edit" onclick="duplicateQuestion('${q.id}')" title="Duplicate question">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
       Duplicate
@@ -497,10 +501,19 @@ function buildCard(q) {
   const addedByBadge = q.addedBy
     ? `<span class="added-by-badge">added by ${esc(q.addedBy)}</span>` : '';
 
+  const reviewSign = q.markedForReview
+    ? `<span class="cq-review-sign" id="${q.id}-review-sign" title="Marked for review" aria-label="Marked for review">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" fill="#FFE8A3" stroke="#D97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <line x1="12" y1="9" x2="12" y2="13.5" stroke="#B45309" stroke-width="2.4" stroke-linecap="round"/>
+          <circle cx="12" cy="17.2" r="1.25" fill="#B45309"/>
+        </svg>
+      </span>` : '';
+
   return `
   <div class="cq-card" id="${q.id}">
     <div class="cq-header">
-      <div class="cq-meta"><span class="cq-id">${esc(q.label)}</span>${tagBadges}${addedByBadge}</div>
+      <div class="cq-meta">${reviewSign}<span class="cq-id">${esc(q.label)}</span>${tagBadges}${addedByBadge}</div>
       <div class="cq-question">${formatText(q.question)}</div>
     </div>
     <div class="cq-actions">
@@ -687,6 +700,21 @@ async function saveQuestion() {
   closeModal();
   rebuildTagButtons();
   renderAll();
+}
+
+// ─────────────────────────────────────────────
+// ADMIN: MARK FOR REVIEW
+// ─────────────────────────────────────────────
+async function toggleMarkForReview(qid) {
+  if (!isLatest() || currentUser.toLowerCase() !== 'admin') return;
+  const q = QUESTIONS.find(q => q.id === qid);
+  if (!q) return;
+
+  q.markedForReview = !q.markedForReview;
+  if (!q.markedForReview) delete q.markedForReview;
+
+  renderAll();
+  await saveBin(QUESTIONS_BIN_ID, QUESTIONS);
 }
 
 // ─────────────────────────────────────────────
@@ -887,6 +915,7 @@ function downloadBackup() {
         label: q.label,
         tags: q.tags,
         addedBy: q.addedBy || 'admin',
+        ...(q.markedForReview ? { markedForReview: true } : {}),
         question: q.question,
         answers: q.answers,
         ratings: {
@@ -1082,7 +1111,8 @@ function parseAndPreviewUpload(filename, data) {
       tags: qTags,
       question: questionText,
       answers: answersList,
-      ...(addedBy && addedBy.toLowerCase() !== 'admin' ? { addedBy } : {})
+      ...(addedBy && addedBy.toLowerCase() !== 'admin' ? { addedBy } : {}),
+      ...(item.markedForReview ? { markedForReview: true } : {})
     });
 
     if (item.ratings && typeof item.ratings === 'object') {
