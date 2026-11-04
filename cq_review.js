@@ -504,7 +504,7 @@ function buildCard(q) {
       <div class="cq-question">${formatText(q.question)}</div>
     </div>
     <div class="cq-actions">
-      <button class="btn btn-answers" onclick="toggleAnswers('${q.id}')">
+      <button class="btn btn-answers" id="${q.id}-answers-btn" onclick="toggleAnswers('${q.id}')">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><circle cx="12" cy="17" r=".5" fill="currentColor"/></svg>
         Show Answers
       </button>
@@ -537,7 +537,7 @@ function buildCard(q) {
 // ─────────────────────────────────────────────
 function toggleAnswers(id) {
   const panel = document.getElementById(id + '-answers');
-  const btn = document.querySelector(`#${id} .btn-answers`);
+  const btn = document.getElementById(id + '-answers-btn');
   const open = panel.classList.toggle('open');
   btn.classList.toggle('active', open);
   const svg = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><circle cx="12" cy="17" r=".5" fill="currentColor"/></svg>`;
