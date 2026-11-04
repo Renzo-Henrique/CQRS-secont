@@ -36,6 +36,7 @@ let modules = [];
 let currentModuleId = null;
 let currentModuleTitle = '';
 let currentModuleDesc = '';
+let currentModuleAcronym = 'CQ';
 let editingModuleId = null;
 
 const DEFAULT_MODULES = [
@@ -273,9 +274,27 @@ document.addEventListener('DOMContentLoaded', () => {
       if (e.key === 'Enter') saveNewModule();
     });
   }
+  const mfAcronym = document.getElementById('mf-acronym');
+  if (mfAcronym) {
+    mfAcronym.addEventListener('input', e => {
+      e.target.value = e.target.value.replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 5);
+    });
+    mfAcronym.addEventListener('keydown', e => {
+      if (e.key === 'Enter') saveNewModule();
+    });
+  }
   const emfTitle = document.getElementById('emf-title');
   if (emfTitle) {
     emfTitle.addEventListener('keydown', e => {
+      if (e.key === 'Enter') saveEditModule();
+    });
+  }
+  const emfAcronym = document.getElementById('emf-acronym');
+  if (emfAcronym) {
+    emfAcronym.addEventListener('input', e => {
+      e.target.value = e.target.value.replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 5);
+    });
+    emfAcronym.addEventListener('keydown', e => {
       if (e.key === 'Enter') saveEditModule();
     });
   }
@@ -635,7 +654,10 @@ function openModal() {
   const builder = document.getElementById('answers-builder');
   builder.innerHTML = '';
   addAnswerField();
-  document.getElementById('f-id-preview').textContent = `CQ-${getNextCQNumber()}`;
+  const prefix = getCurrentPrefix();
+  document.getElementById('f-id-preview').textContent = `${prefix}-${getNextCQNumber()}`;
+  const idHint = document.getElementById('f-id-hint');
+  if (idHint) idHint.textContent = `Automatically assigned as ${prefix}-N.`;
   document.getElementById('modal-backdrop').classList.add('open');
   document.getElementById('f-question').focus();
 }
@@ -686,10 +708,11 @@ async function saveQuestion() {
   answerTxts.forEach((a, i) => { if (!a) markErr(builder.querySelectorAll('textarea')[i]); });
   if (!valid || answerTxts.some(a => !a)) return;
 
+  const prefix = getCurrentPrefix();
   const nextN = getNextCQNumber();
   const newQ = {
-    id: `cq-${nextN}`,
-    label: `CQ-${nextN}`,
+    id: `${prefix.toLowerCase()}-${nextN}`,
+    label: `${prefix}-${nextN}`,
     tags: [...modalTags],
     question: questionTx,
     answers: answerTxts,
@@ -797,6 +820,7 @@ function openEditModal(qid) {
   editTags = [...q.tags];
   document.getElementById('ef-original-id').value = qid;
   document.getElementById('ef-id').value = q.label;
+  document.getElementById('ef-id').placeholder = `e.g. ${getCurrentPrefix()}-2`;
   document.getElementById('ef-question').value = q.question;
   ['ef-id', 'ef-question'].forEach(id => document.getElementById(id).classList.remove('error'));
   renderEditTags();
@@ -861,7 +885,7 @@ async function saveEdit() {
     const el = document.getElementById('ef-id');
     markErr(el);
     el.placeholder = 'ID already exists!';
-    setTimeout(() => el.placeholder = 'e.g. CQ-2', 2000);
+    setTimeout(() => el.placeholder = `e.g. ${getCurrentPrefix()}-2`, 2000);
     valid = false;
   }
   if (!valid || answerTxts.some(a => !a)) return;
@@ -1291,21 +1315,22 @@ async function executeUploadJson() {
         finalVotes = { ...votes };
         finalComments = { ...comments };
 
+        const prefix = getCurrentPrefix(targetModId);
         pendingUploadData.questions.forEach(q => {
           let qId = q.id;
           let qLabel = q.label;
           if (finalQuestions.some(existing => existing.id === qId)) {
             let maxN = 0;
             finalQuestions.forEach(fq => {
-              const match = fq.label?.match(/^CQ-(\d+)/i);
+              const match = fq.label?.match(/^[A-Z]+-(\d+)/i);
               if (match) {
                 const n = parseInt(match[1], 10);
                 if (n > maxN) maxN = n;
               }
             });
             const nextN = maxN + 1;
-            qId = `cq-${nextN}`;
-            qLabel = `CQ-${nextN}`;
+            qId = `${prefix.toLowerCase()}-${nextN}`;
+            qLabel = `${prefix}-${nextN}`;
           }
           finalQuestions.push({ ...q, id: qId, label: qLabel });
 
@@ -1344,21 +1369,22 @@ async function executeUploadJson() {
         finalVotes = existingVotes || {};
         finalComments = existingComments || {};
 
+        const prefix = getCurrentPrefix(targetModId);
         pendingUploadData.questions.forEach(q => {
           let qId = q.id;
           let qLabel = q.label;
           if (finalQuestions.some(existing => existing.id === qId)) {
             let maxN = 0;
             finalQuestions.forEach(fq => {
-              const match = fq.label?.match(/^CQ-(\d+)/i);
+              const match = fq.label?.match(/^[A-Z]+-(\d+)/i);
               if (match) {
                 const n = parseInt(match[1], 10);
                 if (n > maxN) maxN = n;
               }
             });
             const nextN = maxN + 1;
-            qId = `cq-${nextN}`;
-            qLabel = `CQ-${nextN}`;
+            qId = `${prefix.toLowerCase()}-${nextN}`;
+            qLabel = `${prefix}-${nextN}`;
           }
           finalQuestions.push({ ...q, id: qId, label: qLabel });
 
@@ -1402,15 +1428,16 @@ async function executeUploadJson() {
 // ─────────────────────────────────────────────
 async function normalizeIDs(bypassConfirm = false) {
   if (!isLatest()) return;
-  if (!bypassConfirm && !confirm('Are you sure you want to normalize all IDs to CQ-1, CQ-2, etc., based on their current order? This cannot be undone.')) return;
+  const prefix = getCurrentPrefix();
+  if (!bypassConfirm && !confirm(`Are you sure you want to normalize all IDs to ${prefix}-1, ${prefix}-2, etc., based on their current order? This cannot be undone.`)) return;
 
   const newVotes = {};
   const newComments = {};
 
   QUESTIONS.forEach((q, index) => {
     const oldId = q.id;
-    const newLabel = `CQ-${index + 1}`;
-    const newId = `cq-${index + 1}`;
+    const newLabel = `${prefix}-${index + 1}`;
+    const newId = `${prefix.toLowerCase()}-${index + 1}`;
 
     if (votes[oldId]) newVotes[newId] = votes[oldId];
     if (comments[oldId]) newComments[newId] = comments[oldId];
@@ -1607,10 +1634,17 @@ function applyHighlight(textareaId) {
 // UTIL
 // ─────────────────────────────────────────────
 
+function getCurrentPrefix(moduleId = currentModuleId) {
+  const mod = modules.find(m => m.id === moduleId);
+  if (mod && mod.acronym) return mod.acronym.toUpperCase();
+  if (currentModuleAcronym) return currentModuleAcronym.toUpperCase();
+  return 'CQ';
+}
+
 function getNextCQNumber() {
   let maxN = 0;
   QUESTIONS.forEach(q => {
-    const match = q.label.match(/^CQ-(\d+)/i);
+    const match = q.label.match(/^[A-Z]+-(\d+)/i);
     if (match) {
       const n = parseInt(match[1], 10);
       if (n > maxN) maxN = n;
@@ -1706,7 +1740,7 @@ function renderModulesList() {
     return `
       <div class="module-card" onclick="selectModule('${esc(m.id)}')">
         <div class="module-card-header">
-          <span class="module-card-badge">Ontology Module</span>
+          <span class="module-card-badge">Ontology Module${m.acronym ? ' · ' + esc(m.acronym.toUpperCase()) : ''}</span>
           <h2 class="module-card-title">${esc(m.title)}</h2>
           <p class="module-card-desc">${esc(m.description || 'Review structured competency questions, inspect exemplar answers, and evaluate relevance.')}</p>
         </div>
@@ -1728,6 +1762,7 @@ async function selectModule(moduleId) {
   currentModuleId = mod.id;
   currentModuleTitle = mod.title;
   currentModuleDesc = mod.description || '';
+  currentModuleAcronym = (mod.acronym || 'CQ').toUpperCase();
 
   const url = new URL(window.location);
   url.searchParams.set('module', currentModuleId);
@@ -1751,6 +1786,7 @@ function showModulesScreen() {
   currentModuleId = null;
   currentModuleTitle = '';
   currentModuleDesc = '';
+  currentModuleAcronym = 'CQ';
 
   const url = new URL(window.location);
   url.searchParams.delete('module');
@@ -1765,7 +1801,17 @@ function showModulesScreen() {
 
 function openAddModuleModal() {
   const titleInput = document.getElementById('mf-title');
+  const acronymInput = document.getElementById('mf-acronym');
+  const acronymHint = document.getElementById('mf-acronym-hint');
   titleInput.value = '';
+  if (acronymInput) {
+    acronymInput.value = '';
+    acronymInput.classList.remove('error');
+  }
+  if (acronymHint) {
+    acronymHint.textContent = 'Maximum 5 letters (e.g. SD for SD-1, SD-2). Cannot be repeated.';
+    acronymHint.style.color = '';
+  }
   document.getElementById('mf-desc').value = '';
   titleInput.classList.remove('error');
   document.getElementById('add-module-modal-backdrop').classList.add('open');
@@ -1778,14 +1824,45 @@ function closeAddModuleModal() {
 
 async function saveNewModule() {
   const titleInput = document.getElementById('mf-title');
+  const acronymInput = document.getElementById('mf-acronym');
+  const acronymHint = document.getElementById('mf-acronym-hint');
   const title = titleInput.value.trim();
+  const acronym = (acronymInput ? acronymInput.value : '').trim().toUpperCase();
   const desc = document.getElementById('mf-desc').value.trim();
+
+  let valid = true;
   if (!title) {
     titleInput.classList.add('error');
     setTimeout(() => titleInput.classList.remove('error'), 1500);
     titleInput.focus();
-    return;
+    valid = false;
   }
+
+  if (!/^[A-Z]{1,5}$/.test(acronym)) {
+    if (acronymInput) {
+      acronymInput.classList.add('error');
+      setTimeout(() => acronymInput.classList.remove('error'), 1500);
+      if (valid) acronymInput.focus();
+    }
+    if (acronymHint) {
+      acronymHint.textContent = 'Acronym is mandatory and must be 1 to 5 letters (e.g. SD).';
+      acronymHint.style.color = '#9b3a2a';
+    }
+    valid = false;
+  } else if (modules.some(m => (m.acronym || '').toUpperCase() === acronym)) {
+    if (acronymInput) {
+      acronymInput.classList.add('error');
+      setTimeout(() => acronymInput.classList.remove('error'), 1500);
+      if (valid) acronymInput.focus();
+    }
+    if (acronymHint) {
+      acronymHint.textContent = `Acronym "${acronym}" is already in use by another module.`;
+      acronymHint.style.color = '#9b3a2a';
+    }
+    valid = false;
+  }
+
+  if (!valid) return;
 
   let slug = slugify(title);
   if (!slug) slug = `mod-${Date.now()}`;
@@ -1796,6 +1873,7 @@ async function saveNewModule() {
   const newModule = {
     id: slug,
     title,
+    acronym,
     description: desc,
     createdAt: new Date().toISOString()
   };
@@ -1812,7 +1890,17 @@ function openEditModuleModal(moduleId, event) {
   if (!mod) return;
   editingModuleId = moduleId;
   const titleInput = document.getElementById('emf-title');
+  const acronymInput = document.getElementById('emf-acronym');
+  const acronymHint = document.getElementById('emf-acronym-hint');
   titleInput.value = mod.title;
+  if (acronymInput) {
+    acronymInput.value = (mod.acronym || 'CQ').toUpperCase();
+    acronymInput.classList.remove('error');
+  }
+  if (acronymHint) {
+    acronymHint.textContent = 'Maximum 5 letters. Cannot be repeated.';
+    acronymHint.style.color = '';
+  }
   document.getElementById('emf-desc').value = mod.description || '';
   titleInput.classList.remove('error');
   document.getElementById('edit-module-modal-backdrop').classList.add('open');
@@ -1826,14 +1914,45 @@ function closeEditModuleModal() {
 
 async function saveEditModule() {
   const titleInput = document.getElementById('emf-title');
+  const acronymInput = document.getElementById('emf-acronym');
+  const acronymHint = document.getElementById('emf-acronym-hint');
   const title = titleInput.value.trim();
+  const acronym = (acronymInput ? acronymInput.value : '').trim().toUpperCase();
   const desc = document.getElementById('emf-desc').value.trim();
+
+  let valid = true;
   if (!title) {
     titleInput.classList.add('error');
     setTimeout(() => titleInput.classList.remove('error'), 1500);
     titleInput.focus();
-    return;
+    valid = false;
   }
+
+  if (!/^[A-Z]{1,5}$/.test(acronym)) {
+    if (acronymInput) {
+      acronymInput.classList.add('error');
+      setTimeout(() => acronymInput.classList.remove('error'), 1500);
+      if (valid) acronymInput.focus();
+    }
+    if (acronymHint) {
+      acronymHint.textContent = 'Acronym is mandatory and must be 1 to 5 letters (e.g. SD).';
+      acronymHint.style.color = '#9b3a2a';
+    }
+    valid = false;
+  } else if (modules.some(m => m.id !== editingModuleId && (m.acronym || '').toUpperCase() === acronym)) {
+    if (acronymInput) {
+      acronymInput.classList.add('error');
+      setTimeout(() => acronymInput.classList.remove('error'), 1500);
+      if (valid) acronymInput.focus();
+    }
+    if (acronymHint) {
+      acronymHint.textContent = `Acronym "${acronym}" is already in use by another module.`;
+      acronymHint.style.color = '#9b3a2a';
+    }
+    valid = false;
+  }
+
+  if (!valid) return;
 
   const mod = modules.find(m => m.id === editingModuleId);
   if (!mod) return;
@@ -1854,6 +1973,7 @@ async function saveEditModule() {
   }
 
   mod.title = title;
+  mod.acronym = acronym;
   mod.description = desc;
 
   if (oldId !== newId) {
@@ -1883,6 +2003,7 @@ async function saveEditModule() {
     currentModuleId = newId;
     currentModuleTitle = mod.title;
     currentModuleDesc = mod.description;
+    currentModuleAcronym = mod.acronym;
     document.getElementById('nav-module-title').textContent = mod.title;
     document.getElementById('module-workspace-title').textContent = mod.title;
     document.getElementById('module-workspace-desc').textContent = mod.description || '';
@@ -2071,6 +2192,7 @@ async function createVersion() {
       currentModuleId = targetMod.id;
       currentModuleTitle = targetMod.title;
       currentModuleDesc = targetMod.description || '';
+      currentModuleAcronym = (targetMod.acronym || 'CQ').toUpperCase();
       if (modParam !== targetMod.id) {
         const url = new URL(window.location);
         url.searchParams.set('module', targetMod.id);

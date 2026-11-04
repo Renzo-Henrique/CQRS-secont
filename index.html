@@ -229,7 +229,7 @@
         <div
           style="font-family:'DM Mono',monospace;font-size:0.8rem;color:var(--accent);padding:0.45rem 0.8rem;background:var(--tag-bg);border:1px solid var(--border);border-radius:6px;"
           id="f-id-preview">Auto-assigned on save</div>
-        <div class="form-hint">Automatically assigned as CQ-N.</div>
+        <div class="form-hint" id="f-id-hint">Automatically assigned as CQ-N.</div>
       </div>
       <div class="form-row">
         <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 0.4rem;">
@@ -374,7 +374,13 @@
       <button class="modal-close" onclick="closeAddModuleModal()">&#x2715;</button>
       <div class="form-row">
         <label>Module Title <span class="required">*</span></label>
-        <input class="form-input" id="mf-title" placeholder="e.g. Physical Activity" maxlength="80" />
+        <input class="form-input" id="mf-title" placeholder="e.g. Study Design" maxlength="80" />
+      </div>
+      <div class="form-row">
+        <label>ID Acronym <span class="required">*</span></label>
+        <input class="form-input" id="mf-acronym" placeholder="e.g. SD" maxlength="5"
+          style="text-transform: uppercase; font-family: 'DM Mono', monospace; letter-spacing: 0.06em;" />
+        <div class="form-hint" id="mf-acronym-hint">Maximum 5 letters (e.g. SD for SD-1, SD-2). Cannot be repeated.</div>
       </div>
       <div class="form-row">
         <label>Description</label>
@@ -397,6 +403,12 @@
       <div class="form-row">
         <label>Module Title <span class="required">*</span></label>
         <input class="form-input" id="emf-title" placeholder="e.g. Nutritional Intervention" maxlength="80" />
+      </div>
+      <div class="form-row">
+        <label>ID Acronym <span class="required">*</span></label>
+        <input class="form-input" id="emf-acronym" placeholder="e.g. NI" maxlength="5"
+          style="text-transform: uppercase; font-family: 'DM Mono', monospace; letter-spacing: 0.06em;" />
+        <div class="form-hint" id="emf-acronym-hint">Maximum 5 letters. Cannot be repeated.</div>
       </div>
       <div class="form-row">
         <label>Description</label>
