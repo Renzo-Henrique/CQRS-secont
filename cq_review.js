@@ -963,6 +963,122 @@ function downloadBackup() {
   URL.revokeObjectURL(url);
 }
 
+
+// ─────────────────────────────────────────────
+// ADMIN: EXPORT LATEX TABLE
+// ─────────────────────────────────────────────
+
+// Escape special LaTeX characters
+function escapeLatex(text) {
+  return String(text ?? '')
+    .replace(/\\/g, '\\textbackslash{}')
+    .replace(/([{}$&#_%])/g, '\\$1')
+    .replace(/\^/g, '\\textasciicircum{}')
+    .replace(/~/g, '\\textasciitilde{}');
+}
+
+// Convert *italic* and **bold** to LaTeX commands
+function formatLatexText(text) {
+  const input = String(text ?? '');
+
+  // Match bold first, then italic
+  const pattern = /\*\*(.+?)\*\*|\*(.+?)\*/gs;
+
+  let result = '';
+  let lastIndex = 0;
+  let match;
+
+  while ((match = pattern.exec(input)) !== null) {
+    // Escape regular text
+    result += escapeLatex(input.slice(lastIndex, match.index));
+
+    if (match[1] !== undefined) {
+      // **bold** -> \textbf{}
+      result += `\\textbf{${escapeLatex(match[1])}}`;
+    } else {
+      // *italic* -> \textit{}
+      result += `\\textit{${escapeLatex(match[2])}}`;
+    }
+
+    lastIndex = pattern.lastIndex;
+  }
+
+  // Escape remaining text
+  result += escapeLatex(input.slice(lastIndex));
+
+  return result;
+}
+
+function exportLatexTable() {
+  // Admin permission check
+  if (currentUser.toLowerCase() !== 'admin') {
+    alert('Only administrators can export LaTeX tables.');
+    return;
+  }
+
+  if (!currentModuleId) {
+    alert('No module selected.');
+    return;
+  }
+
+  if (QUESTIONS.length === 0) {
+    alert('There are no competency questions to export.');
+    return;
+  }
+
+  // Generate table rows
+  const rows = QUESTIONS.map(q => {
+    const id = escapeLatex(q.id);
+
+    const category = formatLatexText(
+      (q.tags || []).join(', ')
+    );
+
+    const question = formatLatexText(q.question);
+
+    // Use the first exemplar answer
+    const answer = formatLatexText(
+      (q.answers || [])[0] || ''
+    );
+
+    return `\\freq{${id}}{${category}}{${question}}{${answer}}`;
+  });
+
+  // Build LaTeX document fragment
+  const latex = [
+    '\\begin{center}',
+    '\\begin{small}',
+    '\\begin{longtable}{ >{\\centering\\arraybackslash}m{15mm} m{15mm} p{50mm} p{50mm} }',
+    '\\hline',
+    '\\textbf{ID} & \\textbf{Categoria} & \\textbf{Questão} & \\textbf{Resposta} \\\\',
+    '\\hline',
+    '',
+    rows.join('\n\n'),
+    '',
+    '\\end{longtable}',
+    '\\end{small}',
+    '\\end{center}'
+  ].join('\n');
+
+  // Create downloadable .tex file
+  const blob = new Blob([latex], {
+    type: 'text/plain;charset=utf-8'
+  });
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+
+  link.href = url;
+  link.download = `cq-table-${currentModuleId}-v${currentVersion}.tex`;
+
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  URL.revokeObjectURL(url);
+}
+
+
 // ─────────────────────────────────────────────
 // ADMIN: UPLOAD JSON (BATCH IMPORT)
 // ─────────────────────────────────────────────
@@ -1486,6 +1602,12 @@ function updateAdminUI() {
       btnUpload.style.cursor = 'pointer';
       btnUpload.title = "Upload questions from backup JSON";
     }
+  }
+
+  const btnLatex = document.getElementById('btn-export-latex');
+
+  if (btnLatex) {
+    btnLatex.style.display = isAdmin ? 'inline-flex' : 'none';
   }
 
   const btnUploadMod = document.getElementById('btn-upload-module-json');
