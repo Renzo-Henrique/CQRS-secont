@@ -1036,13 +1036,13 @@ function exportLatexTables() {
     const answers = formatLatexText((q.answers || []).filter(a => String(a ?? '').trim()).join('; '));
 
     rowsWithoutAnswers.push(`\\freq{${id}}{${tags}}{${question}}`);
-    rowsWithAnswers.push(`\\freq{${id}}{${tags}}{${question}}{${answers}}`);
+    rowsWithAnswers.push(`\\freq2{${id}}{${tags}}{${question}}{${answers}}`);
   });
 
   const tableQuestions = [
     '\\begin{center}',
     '    \\begin{small}',
-    '        \\begin{longtable}{ >{\\centering\\arraybackslash}m{35mm} p{35mm} p{90mm} }',
+    '        \\begin{longtable}{ >{\\centering\\arraybackslash}m{25mm} p{25mm} p{110mm} }',
     '            \\hline',
     '            \\textbf{ID} & \\textbf{Tags} & \\textbf{Questão} \\\\',
     '            \\hline',
