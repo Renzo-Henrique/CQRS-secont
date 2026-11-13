@@ -1035,8 +1035,8 @@ function exportLatexTables() {
     const question = formatLatexText(q.question);
     const answers = formatLatexText((q.answers || []).filter(a => String(a ?? '').trim()).join('; '));
 
-    rowsWithoutAnswers.push(`${id} & ${tags} & ${question} \\\\`);
-    rowsWithAnswers.push(`${id} & ${tags} & ${question} & ${answers} \\\\`);
+    rowsWithoutAnswers.push(`\\freq{${id}}{${tags}}{${question}}`);
+    rowsWithAnswers.push(`\\freq{${id}}{${tags}}{${question}}{${answers}}`);
   });
 
   const tableQuestions = [
