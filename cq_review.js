@@ -1036,13 +1036,13 @@ function exportLatexTables() {
     const answers = formatLatexText((q.answers || []).filter(a => String(a ?? '').trim()).join('; '));
 
     rowsWithoutAnswers.push(`\\freq{${id}}{${tags}}{${question}}`);
-    rowsWithAnswers.push(`\\freq2{${id}}{${tags}}{${question}}{${answers}}`);
+    rowsWithAnswers.push(`\\freqRespostas{${id}}{${tags}}{${question}}{${answers}}`);
   });
 
   const tableQuestions = [
     '\\begin{center}',
     '    \\begin{small}',
-    '        \\begin{longtable}{ >{\\centering\\arraybackslash}m{25mm} p{25mm} p{110mm} }',
+    '        \\begin{longtable}{ >{\\centering\\arraybackslash}m{20mm} p{20mm} p{120mm} }',
     '            \\hline',
     '            \\textbf{ID} & \\textbf{Tags} & \\textbf{Questão} \\\\',
     '            \\hline',
@@ -1057,7 +1057,7 @@ function exportLatexTables() {
   const tableAnswers = [
     '\\begin{center}',
     '    \\begin{small}',
-    '        \\begin{longtable}{ >{\\centering\\arraybackslash}m{25mm} m{25mm} p{55mm} p{55mm} }',
+    '        \\begin{longtable}{ >{\\centering\\arraybackslash}m{20mm} m{20mm} p{50mm} p{70mm} }',
     '            \\hline',
     '            \\textbf{ID} & \\textbf{Tags} & \\textbf{Questão} & \\textbf{Resposta} \\\\',
     '            \\hline',
