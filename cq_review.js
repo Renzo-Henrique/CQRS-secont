@@ -1009,73 +1009,76 @@ function formatLatexText(text) {
   return result;
 }
 
-function exportLatexTable() {
-  // Admin permission check
+function exportLatexTables() {
   if (currentUser.toLowerCase() !== 'admin') {
     alert('Only administrators can export LaTeX tables.');
     return;
   }
-
   if (!currentModuleId) {
     alert('No module selected.');
     return;
   }
-
-  if (QUESTIONS.length === 0) {
+  if (!QUESTIONS.length) {
     alert('There are no competency questions to export.');
     return;
   }
 
-  // Generate table rows
-  const rows = QUESTIONS.map(q => {
-    const id = escapeLatex(q.id);
+  // Use the module slug as a stable, LaTeX-safe module name in labels.
+  const moduleName = String(currentModuleId).toLowerCase().replace(/[^a-z0-9-]+/g, '-');
+  const rowsWithoutAnswers = [];
+  const rowsWithAnswers = [];
 
-    const category = formatLatexText(
-      (q.tags || []).join(', ')
-    );
-
+  QUESTIONS.forEach(q => {
+    const questionLabel = `${moduleName}-${q.id}`;
+    const id = escapeLatex(questionLabel);
+    const tags = formatLatexText((q.tags || []).join(', '));
     const question = formatLatexText(q.question);
+    const answers = formatLatexText((q.answers || []).filter(a => String(a ?? '').trim()).join('; '));
 
-    // Use the first exemplar answer
-    const answer = formatLatexText(
-      (q.answers || [])[0] || ''
-    );
-
-    return `\\freq{${id}}{${category}}{${question}}{${answer}}`;
+    rowsWithoutAnswers.push(`${id} & ${tags} & ${question} \\\\`);
+    rowsWithAnswers.push(`${id} & ${tags} & ${question} & ${answers} \\\\`);
   });
 
-  // Build LaTeX document fragment
-  const latex = [
+  const tableQuestions = [
     '\\begin{center}',
-    '\\begin{small}',
-    '\\begin{longtable}{ >{\\centering\\arraybackslash}m{15mm} m{15mm} p{50mm} p{50mm} }',
-    '\\hline',
-    '\\textbf{ID} & \\textbf{Categoria} & \\textbf{Questão} & \\textbf{Resposta} \\\\',
-    '\\hline',
-    '',
-    rows.join('\n\n'),
-    '',
-    '\\end{longtable}',
-    '\\end{small}',
+    '    \\begin{small}',
+    '        \\begin{longtable}{ >{\\centering\\arraybackslash}m{35mm} p{35mm} p{90mm} }',
+    '            \\hline',
+    '            \\textbf{ID} & \\textbf{Tags} & \\textbf{Questão} \\\\',
+    '            \\hline',
+    ...rowsWithoutAnswers,
+    '            \\hline',
+    '        \\end{longtable}',
+    '    \\end{small}',
+    '    \\label{tabela-CQs-' + moduleName + '}',
     '\\end{center}'
   ].join('\n');
 
-  // Create downloadable .tex file
-  const blob = new Blob([latex], {
-    type: 'text/plain;charset=utf-8'
-  });
+  const tableAnswers = [
+    '\\begin{center}',
+    '    \\begin{small}',
+    '        \\begin{longtable}{ >{\\centering\\arraybackslash}m{25mm} m{25mm} p{55mm} p{55mm} }',
+    '            \\hline',
+    '            \\textbf{ID} & \\textbf{Tags} & \\textbf{Questão} & \\textbf{Resposta} \\\\',
+    '            \\hline',
+    ...rowsWithAnswers,
+    '            \\hline',
+    '        \\end{longtable}',
+    '    \\end{small}',
+    '    \\label{tabela-CQs-' + moduleName + '-respostas}',
+    '\\end{center}'
+  ].join('\n');
 
+  const latex = `${tableQuestions}\n\n${tableAnswers}`;
+  const blob = new Blob([latex], { type: 'text/plain;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
-
   link.href = url;
-  link.download = `cq-table-${currentModuleId}-v${currentVersion}.tex`;
-
+  link.download = `cq-tables-${moduleName}-v${currentVersion}.tex`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 
@@ -1605,10 +1608,7 @@ function updateAdminUI() {
   }
 
   const btnLatex = document.getElementById('btn-export-latex');
-
-  if (btnLatex) {
-    btnLatex.style.display = isAdmin ? 'inline-flex' : 'none';
-  }
+  if (btnLatex) btnLatex.style.display = isAdmin && !!currentModuleId ? 'inline-flex' : 'none';
 
   const btnUploadMod = document.getElementById('btn-upload-module-json');
   if (btnUploadMod) btnUploadMod.style.display = isAdmin ? 'inline-flex' : 'none';
